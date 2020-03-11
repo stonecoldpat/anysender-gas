@@ -156,7 +156,8 @@ export async function subscribe(
   const filter = {
     address: ANYSENDER_RELAY_CONTRACT,
     fromBlock: blockNo - 2,
-    topics: [topics]
+    toBlock: blockNo + 10000,
+    topics: topics
   };
 
   const relayTxId = await getRelayTxID(relayTx);
@@ -165,7 +166,7 @@ export async function subscribe(
     setTimeout(
       () =>
         reject(new Error("Missing event for relay transaction: " + relayTxId)),
-      300000,
+      1800000,
       "No event emitted!"
     );
   });
@@ -174,6 +175,7 @@ export async function subscribe(
     provider.once(filter, result => {
       const relay = new RelayFactory(wallet).attach(ANYSENDER_RELAY_CONTRACT);
 
+      console.log("Filter: " + JSON.stringify(filter));
       const recordedRelayTxId = relay.interface.events.RelayExecuted.decode(
         result.data,
         result.topics

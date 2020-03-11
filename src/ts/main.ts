@@ -9,9 +9,10 @@ import {
   subscribe,
   getSignedRelayTx
 } from "./anysender-utils";
+import AnySenderClient from "@any-sender/client";
 
 // This account has ETHER to top up the any.sender service
-const mnemonic = "12 word seed";
+// const mnemonic = "";
 
 /**
  * Set up the provider and wallet
@@ -41,12 +42,13 @@ async function deployGasContract(
   provider: Provider
 ): Promise<Contract> {
   const gasConFactory = new GasConFactory(wallet);
-  const gasConTx = gasConFactory.getDeployTransaction();
-  const response = await wallet.sendTransaction(gasConTx);
-  const receipt = await response.wait(6);
+  // const gasConTx = gasConFactory.getDeployTransaction();
+  // const response = await wallet.sendTransaction(gasConTx);
+  // const receipt = await response.wait(6);
 
   const gasCon = new ethers.Contract(
-    receipt.contractAddress,
+    "0xdFE5Dd55C6161A2Fa9B0545aC3b704344Ff2dd97",
+    // receipt.contractAddress,
     gasConFactory.interface.abi,
     provider
   );
@@ -82,13 +84,16 @@ async function sendGas(
   const anysender = await getAnySenderClient();
 
   // Waits until the RelayTxID is confirmed via Relay.sol
-  await subscribe(signedRelayTx, wallet, provider);
+  const subscribePromise = subscribe(signedRelayTx, wallet, provider);
 
   // Let's sign it and send it off!
   const txReceipt = await anysender.relay(signedRelayTx);
 
   // Receipt of any.sender
-  console.log(txReceipt);
+  console.log("RelayTxID: " + AnySenderClient.relayTxId(signedRelayTx));
+  console.log("any.sender sig: " + txReceipt.receiptSignature);
+
+  await subscribePromise;
 
   // Let's confirm the voter is registered
   const newIndex = await gasCon.lastIndex();
