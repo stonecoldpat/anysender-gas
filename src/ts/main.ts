@@ -7,12 +7,13 @@ import {
   onchainDepositFor,
   getAnySenderClient,
   subscribe,
-  getSignedRelayTx
+  getSignedRelayTx,
+  ANYSENDER_RELAY_CONTRACT
 } from "./anysender-utils";
 import AnySenderClient from "@any-sender/client";
 
 // This account has ETHER to top up the any.sender service
-// const mnemonic = "";
+const mnemonic = "";
 
 /**
  * Set up the provider and wallet
@@ -93,6 +94,7 @@ async function sendGas(
   console.log("RelayTxID: " + AnySenderClient.relayTxId(signedRelayTx));
   console.log("any.sender sig: " + txReceipt.receiptSignature);
 
+  // Waits for event to be emitted (or a timeout)
   await subscribePromise;
 
   // Let's confirm the voter is registered

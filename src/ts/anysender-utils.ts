@@ -10,7 +10,8 @@ import { CALL_EXCEPTION } from "ethers/errors";
 export const MINIMUM_ANYSENDER_DEADLINE = 410; // It is 400, but provides some wiggle room.
 const ANYSENDER_API = "https://api.pisa.watch/any.sender.ropsten";
 const ANYSENDER_BALANCE = "/balance/";
-const ANYSENDER_RELAY_CONTRACT = "0xe8468689AB8607fF36663EE6522A7A595Ed8bC0C";
+export const ANYSENDER_RELAY_CONTRACT =
+  "0xe8468689AB8607fF36663EE6522A7A595Ed8bC0C";
 const RECEIPT_ADDR = "0xe41743Ca34762b84004D3ABe932443FC51D561D5";
 const DEPOSIT_CONFIRMATIONS = 10;
 
@@ -155,44 +156,54 @@ export async function subscribe(
 
   const filter = {
     address: ANYSENDER_RELAY_CONTRACT,
-    fromBlock: blockNo - 2,
+    fromBlock: blockNo - 10,
     toBlock: blockNo + 10000,
     topics: topics
   };
 
   const relayTxId = await getRelayTxID(relayTx);
 
-  const promise1 = new Promise(function(resolve, reject) {
-    setTimeout(
-      () =>
-        reject(new Error("Missing event for relay transaction: " + relayTxId)),
-      1800000,
-      "No event emitted!"
-    );
+  const timeoutPromise = wait(
+    1800000,
+    "Timed out waiting for " + relayTxId + " event"
+  );
+
+  const findEventPromise = new Promise(async resolve => {
+    let found = false;
+    const relay = new RelayFactory(wallet).attach(ANYSENDER_RELAY_CONTRACT);
+
+    while (!found) {
+      await wait(8000, "");
+      await provider.getLogs(filter).then(result => {
+        // Go through each log found (should be 1).
+        for (let i = 0; i < result.length; i++) {
+          const recordedRelayTxId = relay.interface.events.RelayExecuted.decode(
+            result[i].data,
+            result[i].topics
+          ).relayTxId;
+
+          if (relayTxId == recordedRelayTxId) {
+            console.log(relayTxId + " @ " + Date.now());
+            found = true;
+            resolve();
+          } else {
+            console.log("Opps found: " + recordedRelayTxId);
+          }
+        }
+      });
+    }
   });
 
-  const promise2 = new Promise(resolve => {
-    provider.once(filter, result => {
-      const relay = new RelayFactory(wallet).attach(ANYSENDER_RELAY_CONTRACT);
-
-      console.log("Filter: " + JSON.stringify(filter));
-      const recordedRelayTxId = relay.interface.events.RelayExecuted.decode(
-        result.data,
-        result.topics
-      ).relayTxId;
-
-      if (relayTxId == recordedRelayTxId) {
-        console.log(relayTxId + " @ " + Date.now());
-        resolve();
-      } else {
-        console.log("Opps found: " + recordedRelayTxId);
-      }
-    });
-  });
-
-  return Promise.race([promise1, promise2]);
+  return Promise.race([timeoutPromise, findEventPromise]);
 }
 
+async function wait(ms: number, message: string) {
+  return new Promise(function(resolve, reject) {
+    setTimeout(() => {
+      resolve();
+    }, ms);
+  });
+}
 /**
  * Compute a relay transaction ID
  * @param relayTx Relay Transaction ID
