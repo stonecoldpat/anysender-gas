@@ -182,6 +182,8 @@ export async function subscribe(
       if (relayTxId == recordedRelayTxId) {
         console.log(relayTxId + " @ " + Date.now());
         resolve();
+      } else {
+        console.log("Opps found: " + recordedRelayTxId);
       }
     });
   });

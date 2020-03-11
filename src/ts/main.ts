@@ -81,14 +81,14 @@ async function sendGas(
 
   const anysender = await getAnySenderClient();
 
-  // Let's sign it and send it off!
-  await anysender.relay(signedRelayTx);
-
-  // Receipt of any.sender
-  // console.log(txReceipt);
-
   // Waits until the RelayTxID is confirmed via Relay.sol
   await subscribe(signedRelayTx, wallet, provider);
+
+  // Let's sign it and send it off!
+  const txReceipt = await anysender.relay(signedRelayTx);
+
+  // Receipt of any.sender
+  console.log(txReceipt);
 
   // Let's confirm the voter is registered
   const newIndex = await gasCon.lastIndex();
