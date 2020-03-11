@@ -11,8 +11,7 @@ import {
 } from "./anysender-utils";
 
 // This account has ETHER to top up the any.sender service
-const mnemonic =
-  "12-word seed";
+const mnemonic = "12 word seed";
 
 /**
  * Set up the provider and wallet
@@ -20,7 +19,7 @@ const mnemonic =
 async function setup() {
   const infuraProvider = new ethers.providers.InfuraProvider(
     "ropsten",
-    "ropstenid"
+    "7333c8bcd07b4a179b0b0a958778762b"
   );
 
   const mnemonicWallet = ethers.Wallet.fromMnemonic(mnemonic);
@@ -105,14 +104,18 @@ async function sendGas(
   const { wallet, provider } = await setup();
   console.log("Wallet address: " + wallet.address);
 
-  // const toDeposit = "180";
+  const bal = await provider.getBalance(wallet.address);
 
-  // // Deposit to any.sender
-  // console.log(
-  //   "Admin deposits " + toDeposit + " ether into the any.sender contract"
-  // );
-  // await onchainDepositFor(parseEther(toDeposit), wallet);
-  // console.log("Deposit processed.");
+  if (bal.gt(parseEther("180"))) {
+    const toDeposit = "180";
+
+    // Deposit to any.sender
+    console.log(
+      "Admin deposits " + toDeposit + " ether into the any.sender contract"
+    );
+    await onchainDepositFor(parseEther(toDeposit), wallet);
+    console.log("Deposit processed.");
+  }
 
   console.log("Deploy gas contract.");
   const gasCon = await deployGasContract(wallet, provider);
