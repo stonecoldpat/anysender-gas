@@ -4,14 +4,12 @@ import { Provider } from "ethers/providers";
 import { RelayFactory } from "@any-sender/contracts";
 import AnySenderClient from "@any-sender/client";
 import { RelayTransaction } from "@any-sender/data-entities";
-import { exists } from "fs";
-import { CALL_EXCEPTION } from "ethers/errors";
 
 export const MINIMUM_ANYSENDER_DEADLINE = 410; // It is 400, but provides some wiggle room.
 const ANYSENDER_API = "https://api.pisa.watch/any.sender.ropsten";
 const ANYSENDER_BALANCE = "/balance/";
 export const ANYSENDER_RELAY_CONTRACT =
-  "0xe8468689AB8607fF36663EE6522A7A595Ed8bC0C";
+  "0x4D0969B57052B5F94ED8f8ff2ceD27264E0F268C";
 const RECEIPT_ADDR = "0xe41743Ca34762b84004D3ABe932443FC51D561D5";
 const DEPOSIT_CONFIRMATIONS = 10;
 
@@ -103,7 +101,7 @@ export async function checkBalance(wallet: Wallet) {
  * Fetches a signed relay transaction
  * @param gas Gas limit
  * @param callData Calldata to be executed
- * @param refund Requested refund (if fails)
+ * @param compensation Requested compensation (if fails)
  * @param contract Contract
  * @param wallet Signer
  * @param provider InfuraProvider
@@ -111,7 +109,7 @@ export async function checkBalance(wallet: Wallet) {
 export async function getSignedRelayTx(
   gas: number,
   callData: string,
-  refund: string,
+  compensation: string,
   contract: Contract,
   wallet: Wallet,
   provider: Provider
@@ -125,7 +123,7 @@ export async function getSignedRelayTx(
     gas: gas,
     data: callData,
     deadlineBlockNumber: blockNo,
-    refund: refund,
+    compensation: compensation,
     relayContractAddress: ANYSENDER_RELAY_CONTRACT
   };
 
@@ -214,7 +212,7 @@ export async function getRelayTxID(relayTx: {
   gas: number;
   data: string;
   deadlineBlockNumber: number;
-  refund: string;
+  compensation: string;
   relayContractAddress: string;
 }): Promise<string> {
   const messageEncoded = defaultAbiCoder.encode(
@@ -224,10 +222,16 @@ export async function getRelayTxID(relayTx: {
       relayTx.from,
       relayTx.data,
       relayTx.deadlineBlockNumber,
-      relayTx.refund,
+      relayTx.compensation,
       relayTx.gas,
       relayTx.relayContractAddress
     ]
   );
   return keccak256(messageEncoded);
+}
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }

@@ -7,8 +7,7 @@ import {
   onchainDepositFor,
   getAnySenderClient,
   subscribe,
-  getSignedRelayTx,
-  ANYSENDER_RELAY_CONTRACT
+  getSignedRelayTx
 } from "./anysender-utils";
 import AnySenderClient from "@any-sender/client";
 
@@ -55,6 +54,12 @@ async function deployGasContract(
   );
 
   return gasCon;
+}
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 async function sendGas(
@@ -113,8 +118,8 @@ async function sendGas(
 
   const bal = await provider.getBalance(wallet.address);
 
-  if (bal.gt(parseEther("180"))) {
-    const toDeposit = "180";
+  if (bal.gt(parseEther("10"))) {
+    const toDeposit = "10";
 
     // Deposit to any.sender
     console.log(
@@ -140,9 +145,10 @@ async function sendGas(
 
     roundNo = roundNo + 1;
 
-    // Wait 5 minutes before next round
     await new Promise(function(resolve, reject) {
-      setTimeout(resolve, 60000, "No event emitted!");
+      const timeout = getRandomInt(50000, 150000);
+
+      setTimeout(resolve, timeout, "happy face");
     });
   }
 })().catch(e => {
