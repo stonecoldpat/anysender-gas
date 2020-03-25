@@ -19,7 +19,9 @@
     "url": "git+https://github.com/PISAresearch/any.sender.git"
   },
   "scripts": {
+    "build-spam": "npm run build && npm run spam",
     "build-execute": "npm run build && npm run execute",
+    "spam": "ts-node src/ts/spam.ts",
     "execute": "ts-node src/ts/main.ts",
     "build": "waffle waffle.json && npm run build-types",
     "build-types": "typechain --target ethers --outDir ./out ./compiledSol/**/*.json"

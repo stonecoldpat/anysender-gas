@@ -4,6 +4,7 @@ import { Provider } from "ethers/providers";
 import { RelayFactory } from "@any-sender/contracts";
 import AnySenderClient from "@any-sender/client";
 import { RelayTransaction } from "@any-sender/data-entities";
+import fetch from "cross-fetch";
 
 export const MINIMUM_ANYSENDER_DEADLINE = 410; // It is 400, but provides some wiggle room.
 const ANYSENDER_API = "https://api.pisa.watch/any.sender.ropsten";

@@ -141,8 +141,12 @@ async function sendGas(
   while (true) {
     console.log(roundNo + ": New round starting now");
 
-    await sendGas(gasCon, wallet, provider);
-
+    try {
+      await sendGas(gasCon, wallet, provider);
+    } catch (error) {
+      console.log(error);
+      console.log("Lets just wait another minute and try again");
+    }
     roundNo = roundNo + 1;
 
     await new Promise(function(resolve, reject) {

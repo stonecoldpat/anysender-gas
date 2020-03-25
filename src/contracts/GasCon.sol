@@ -4,6 +4,11 @@ contract GasCon {
 
     mapping(uint => uint) public gasStorage;
     uint public lastIndex = 0;
+    address owner;
+
+    constructor() public {
+      owner = msg.sender;
+    }
 
     function useGas(uint toStore) public  {
 
@@ -13,6 +18,11 @@ contract GasCon {
       }
 
       lastIndex = lastIndex + toStore;
+    }
+
+    function kill() public {
+      require(msg.sender == owner, "Only owner can kill");
+      selfdestruct(msg.sender);
     }
 
 }
