@@ -62,6 +62,12 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/**
+ * Send large transaction
+ * @param gasCon Gas Contract
+ * @param wallet Signer
+ * @param provider Infura Provider
+ */
 async function sendGas(
   gasCon: ethers.Contract,
   wallet: Wallet,

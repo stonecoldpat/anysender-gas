@@ -5,8 +5,9 @@ import { RelayFactory } from "@any-sender/contracts";
 import AnySenderClient from "@any-sender/client";
 import { RelayTransaction } from "@any-sender/data-entities";
 import fetch from "cross-fetch";
+import * as nodemailer from "nodemailer";
 
-export const MINIMUM_ANYSENDER_DEADLINE = 410; // It is 400, but provides some wiggle room.
+export const MINIMUM_ANYSENDER_DEADLINE = 410; // It is 400, but this will provide some wiggle room.
 const ANYSENDER_API = "https://api.pisa.watch/any.sender.ropsten";
 const ANYSENDER_BALANCE = "/balance/";
 export const ANYSENDER_RELAY_CONTRACT =
@@ -162,45 +163,92 @@ export async function subscribe(
 
   const relayTxId = await getRelayTxID(relayTx);
 
-  const timeoutPromise = wait(
-    1800000,
-    "Timed out waiting for " + relayTxId + " event"
-  );
+  // const timeoutPromise = delay(1800000);
 
   const findEventPromise = new Promise(async resolve => {
     let found = false;
     const relay = new RelayFactory(wallet).attach(ANYSENDER_RELAY_CONTRACT);
 
     while (!found) {
-      await wait(8000, "");
+      await delay(8000); // Sleep for 8 seconds before checking again
       await provider.getLogs(filter).then(result => {
-        // Go through each log found (should be 1).
         for (let i = 0; i < result.length; i++) {
           const recordedRelayTxId = relay.interface.events.RelayExecuted.decode(
             result[i].data,
             result[i].topics
           ).relayTxId;
 
+          // Did we find it?
           if (relayTxId == recordedRelayTxId) {
-            console.log(relayTxId + " @ " + Date.now());
+            const confirmedBlockNumber = result[0]["blockNumber"];
+            const length = confirmedBlockNumber - blockNo;
+
+            sendMail(
+              "Relay transaction was late",
+              "It took " +
+                length +
+                " blocks for " +
+                relayTxId +
+                " to get accepted."
+            );
+
+            // 100 block threshold
+            if (length > 100) {
+              console.log("THIS JOB TOOK OVER 100 BLOCKS TO GET IN!!!!!!");
+            }
+
+            console.log(relayTxId + " - " + length + " blocks");
             found = true;
             resolve();
           } else {
-            console.log("Opps found: " + recordedRelayTxId);
+            console.log(
+              "Opps we found " +
+                recordedRelayTxId +
+                " instead.... something went wrong."
+            );
           }
         }
       });
     }
   });
 
-  return Promise.race([timeoutPromise, findEventPromise]);
+  return findEventPromise;
 }
 
-async function wait(ms: number, message: string) {
-  return new Promise(function(resolve, reject) {
-    setTimeout(() => {
-      resolve();
-    }, ms);
+/**
+ * Delay function
+ * @param ms Milli-seconds
+ */
+export async function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Notify Patrick when something bad happens via email.
+ * @param message Message to email
+ */
+
+export async function sendMail(subject: string, message: string) {
+  const username = "";
+  const password = "";
+
+  var transporter = nodemailer.createTransport(
+    `smtps://` + username + `%40gmail.com:` + password + `@smtp.gmail.com`
+  );
+
+  var mailOptions = {
+    from: username + "@gmail.com",
+    to: "stonecoldpat@gmail.com",
+    subject: subject,
+    text: message
+  };
+
+  transporter.sendMail(mailOptions, function(error, info) {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("Email sent: " + info.response);
+    }
   });
 }
 /**
@@ -229,10 +277,4 @@ export async function getRelayTxID(relayTx: {
     ]
   );
   return keccak256(messageEncoded);
-}
-
-function getRandomInt(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
 }

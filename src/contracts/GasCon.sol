@@ -20,9 +20,6 @@ contract GasCon {
       lastIndex = lastIndex + toStore;
     }
 
-    function kill() public {
-      require(msg.sender == owner, "Only owner can kill");
-      selfdestruct(msg.sender);
-    }
+
 
 }

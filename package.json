@@ -31,12 +31,16 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0",
+    "@types/nodemailer": "^6.4.0",
+    "@types/nodemailer-direct-transport": "^1.0.31",
+    "@types/nodemailer-smtp-transport": "^2.7.4",
     "cross-fetch": "^3.0.4",
+    "nodemailer": "^6.4.6",
     "request-promise-native": "^1.0.8"
   },
   "devDependencies": {
     "@any-sender/client": "^0.2.0-beta.0",
-    "@types/node": "^13.5.0",
+    "@types/node": "^13.9.4",
     "@types/request-promise-native": "^1.0.17",
     "ethereum-waffle": "2.3.0-istanbul.0",
     "ethers": "4.0.41",
