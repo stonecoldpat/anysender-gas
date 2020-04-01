@@ -9,3 +9,6 @@ export const MNEMONIC = "";
 export const INFURA_PROJECT_ID = "";
 
 export const TO_BURST = 10;
+
+export const MAILGUN_USERNAME = "";
+export const MAILGUN_PASSWORD = "";

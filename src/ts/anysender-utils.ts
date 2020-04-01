@@ -10,7 +10,9 @@ import {
   ANYSENDER_RELAY_CONTRACT,
   DEPOSIT_CONFIRMATIONS,
   RECEIPT_SIGNER_ADDR,
-  MINIMUM_ANYSENDER_DEADLINE
+  MINIMUM_ANYSENDER_DEADLINE,
+  MAILGUN_USERNAME,
+  MAILGUN_PASSWORD
 } from "./config";
 import { wait } from "./spam-utils";
 
@@ -247,19 +249,18 @@ export async function sendMail(
   html: string,
   error: boolean
 ) {
-  const username = "postmaster";
-  const password = "0df668a31bbb75f51a25fea50f7eabe1-ed4dc7c4-61bdaf1d";
   const prependSubject = new Date(TIMESTAMP).toUTCString() + ": " + subject;
   var transporter = nodemailer.createTransport(
     `smtps://` +
-      username +
+      MAILGUN_USERNAME +
       `%40sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org:` +
-      password +
+      MAILGUN_PASSWORD +
       `@smtp.mailgun.org`
   );
 
   let mailOptions = {
-    from: username + "@sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org",
+    from:
+      MAILGUN_USERNAME + "@sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org",
     to: "stonecoldpat@gmail.com",
     subject: prependSubject,
     text: message,
@@ -277,7 +278,9 @@ export async function sendMail(
   // Only email chris if there was an error
   if (error) {
     mailOptions = {
-      from: username + "@sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org",
+      from:
+        MAILGUN_USERNAME +
+        "@sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org",
       to: "cpbuckland88@gmail.com",
       subject: prependSubject,
       text: message,
