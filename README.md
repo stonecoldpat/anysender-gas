@@ -1,6 +1,6 @@
-### Spam scripts
+## Spam scripts
 
-## Setup:
+### Setup:
 
 We need to update the config.ts with:
 
@@ -13,7 +13,7 @@ We need to update the config.ts with:
 The schedule for spam.ts and sendToAnySender.ts can be modified in their respective files. Both rely on waitForNextRound() for their daily restart (in spam-utils.ts) which can be modified to decide if it starts once-a-day and at what time. 
 
 
-## Execute 
+### Execute 
 To build the contracts for deployment: 
 
 ``` npm run build ```
