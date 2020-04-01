@@ -1,4 +1,23 @@
-### Basic test contract for an any.sender instance
-We have a contract GasCon.sol with a single function GasCon.useGas(uint toStore). Its only purpose is to fill up storage slots on the network (e.g. 20k gas per storage).
+### Spam scripts
 
-The code here will send 1 transaction via any.sender to GasCon every minute. So we can see how well any.sender handles a continuous flow of jobs in a production environment.
+## Setup:
+
+We need to update the config.ts with a 12-word seed and a ropsten infura ID. 
+
+``` MNEMONIC ```: 12 word seed
+``` INFURA_PROJECT_ID ```: Ropsten Infura ID 
+```TO_BURST```: Control frequency of bursts to any-sender (e.g. attempt 5 relays, 6 relays, etc)
+
+The schedule for spam.ts and sendToAnySender.ts can be modified in their respective files. Both rely on waitForNextRound() for their daily restart (in spam-utils.ts) which can be modified to decide if it starts once-a-day and at what time. 
+
+
+## Execute 
+To build the contracts for deployment: 
+
+``` npm run build ```
+
+To run the scripts:
+
+``` npm run spam ```
+
+``` npm run sendToAnySender ```
