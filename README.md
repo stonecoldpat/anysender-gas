@@ -2,7 +2,7 @@
 
 ## Setup:
 
-We need to update the config.ts with a 12-word seed and a ropsten infura ID. 
+We need to update the config.ts with:
 
 ``` MNEMONIC ```: 12 word seed
 
