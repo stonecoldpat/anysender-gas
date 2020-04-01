@@ -251,16 +251,16 @@ export async function sendMail(
 ) {
   const prependSubject = new Date(TIMESTAMP).toUTCString() + ": " + subject;
   var transporter = nodemailer.createTransport(
-    `smtps://` +
+    `smtps://postmaster` +
+      +`%40` +
       MAILGUN_USERNAME +
-      `%40sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org:` +
+      ":" +
       MAILGUN_PASSWORD +
       `@smtp.mailgun.org`
   );
 
   let mailOptions = {
-    from:
-      MAILGUN_USERNAME + "@sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org",
+    from: "postmaster" + "@" + MAILGUN_USERNAME,
     to: "stonecoldpat@gmail.com",
     subject: prependSubject,
     text: message,
@@ -278,9 +278,7 @@ export async function sendMail(
   // Only email chris if there was an error
   if (error) {
     mailOptions = {
-      from:
-        MAILGUN_USERNAME +
-        "@sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org",
+      from: "postmaster" + "@" + MAILGUN_USERNAME,
       to: "cpbuckland88@gmail.com",
       subject: prependSubject,
       text: message,
