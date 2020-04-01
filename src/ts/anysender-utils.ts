@@ -1,20 +1,25 @@
-import { Wallet, Contract } from "ethers";
+import { Wallet, Contract, ethers } from "ethers";
 import { defaultAbiCoder, BigNumber, keccak256, arrayify } from "ethers/utils";
-import { Provider } from "ethers/providers";
+import { Provider, Log } from "ethers/providers";
 import { RelayFactory } from "@any-sender/contracts";
 import AnySenderClient from "@any-sender/client";
 import { RelayTransaction } from "@any-sender/data-entities";
-import fetch from "cross-fetch";
 import * as nodemailer from "nodemailer";
+import { UnsignedRelayTransaction } from "@any-sender/client/lib/client";
+import {
+  ANYSENDER_RELAY_CONTRACT,
+  DEPOSIT_CONFIRMATIONS,
+  RECEIPT_SIGNER_ADDR,
+  MINIMUM_ANYSENDER_DEADLINE
+} from "./config";
+import { wait } from "./spam-utils";
 
-export const MINIMUM_ANYSENDER_DEADLINE = 410; // It is 400, but this will provide some wiggle room.
 const ANYSENDER_API = "https://api.pisa.watch/any.sender.ropsten";
-const ANYSENDER_BALANCE = "/balance/";
-export const ANYSENDER_RELAY_CONTRACT =
-  "0x4D0969B57052B5F94ED8f8ff2ceD27264E0F268C";
-const RECEIPT_ADDR = "0xe41743Ca34762b84004D3ABe932443FC51D561D5";
-const DEPOSIT_CONFIRMATIONS = 10;
+let TIMESTAMP = Date.now();
 
+export async function updateTimestamp() {
+  TIMESTAMP = Date.now();
+}
 /**
  * Deposit coins into any.sender contract.
  * @param wallet Signer
@@ -35,7 +40,7 @@ export async function onchainDepositFor(toDeposit: BigNumber, wallet: Wallet) {
  * Fetch an any.sender client instance
  */
 export async function getAnySenderClient() {
-  return new AnySenderClient(ANYSENDER_API, RECEIPT_ADDR);
+  return new AnySenderClient(ANYSENDER_API, RECEIPT_SIGNER_ADDR);
 }
 
 /**
@@ -88,15 +93,9 @@ function flipBit(bits: BigNumber, indexToFlip: BigNumber): BigNumber {
  * @param wallet Signer
  */
 export async function checkBalance(wallet: Wallet) {
-  const balanceUrl = ANYSENDER_API + ANYSENDER_BALANCE + wallet.address;
-
-  const res = await fetch(balanceUrl);
-
-  if (res.status > 200) {
-    throw new Error("Bad response from server");
-  }
-
-  return await res.json();
+  const anySenderClient = await getAnySenderClient();
+  const res = await anySenderClient.balance(wallet.address);
+  return res;
 }
 
 /**
@@ -129,7 +128,7 @@ export async function getSignedRelayTx(
     relayContractAddress: ANYSENDER_RELAY_CONTRACT
   };
 
-  const relayTxId = await getRelayTxID(unsignedRelayTx);
+  const relayTxId = AnySenderClient.relayTxId(unsignedRelayTx);
   const signature = await wallet.signMessage(arrayify(relayTxId));
 
   const signedRelayTx: RelayTransaction = {
@@ -147,11 +146,11 @@ export async function getSignedRelayTx(
  * @param provider InfuraProvider
  */
 export async function subscribe(
-  relayTx: RelayTransaction,
+  relayTx: UnsignedRelayTransaction,
+  blockNo: number,
   wallet: Wallet,
   provider: Provider
 ) {
-  const blockNo = await provider.getBlockNumber();
   const topics = AnySenderClient.getRelayExecutedEventTopics(relayTx);
 
   const filter = {
@@ -161,54 +160,29 @@ export async function subscribe(
     topics: topics
   };
 
-  const relayTxId = await getRelayTxID(relayTx);
-
-  // const timeoutPromise = delay(1800000);
+  const relayTxId = AnySenderClient.relayTxId(relayTx);
 
   const findEventPromise = new Promise(async resolve => {
     let found = false;
     const relay = new RelayFactory(wallet).attach(ANYSENDER_RELAY_CONTRACT);
 
     while (!found) {
-      await delay(8000); // Sleep for 8 seconds before checking again
-      await provider.getLogs(filter).then(result => {
-        for (let i = 0; i < result.length; i++) {
-          const recordedRelayTxId = relay.interface.events.RelayExecuted.decode(
-            result[i].data,
-            result[i].topics
-          ).relayTxId;
+      await wait(20000); // Sleep for 8 seconds before checking again
 
-          // Did we find it?
-          if (relayTxId == recordedRelayTxId) {
-            const confirmedBlockNumber = result[0]["blockNumber"];
-            const length = confirmedBlockNumber - blockNo;
+      // Try to fetch logs. We might get an infura error.
+      // If so... just ignore it and go back to sleep.
+      try {
+        await provider.getLogs(filter).then(result => {
+          const length = lookupLog(relayTxId, blockNo, result, relay);
 
-            sendMail(
-              "Relay transaction was late",
-              "It took " +
-                length +
-                " blocks for " +
-                relayTxId +
-                " to get accepted."
-            );
-
-            // 100 block threshold
-            if (length > 100) {
-              console.log("THIS JOB TOOK OVER 100 BLOCKS TO GET IN!!!!!!");
-            }
-
-            console.log(relayTxId + " - " + length + " blocks");
+          if (length > 0) {
             found = true;
-            resolve();
-          } else {
-            console.log(
-              "Opps we found " +
-                recordedRelayTxId +
-                " instead.... something went wrong."
-            );
+            resolve(length);
           }
-        }
-      });
+        });
+      } catch (e) {
+        console.log(e);
+      }
     }
   });
 
@@ -216,11 +190,50 @@ export async function subscribe(
 }
 
 /**
- * Delay function
- * @param ms Milli-seconds
+ * Go through log to find relay transaction id
+ * @param relayTxId Relay Transaction ID
+ * @param blockNo Starting block number
+ * @param result Logs
+ * @param relay Relay contract
  */
-export async function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function lookupLog(
+  relayTxId: string,
+  blockNo: number,
+  result: Log[],
+  relay: ethers.Contract
+) {
+  for (let i = 0; i < result.length; i++) {
+    const recordedRelayTxId = relay.interface.events.RelayExecuted.decode(
+      result[i].data,
+      result[i].topics
+    ).relayTxId;
+
+    // Did we find it?
+    if (relayTxId == recordedRelayTxId) {
+      const confirmedBlockNumber = result[0]["blockNumber"];
+      const length = confirmedBlockNumber - blockNo;
+
+      // 75 block threshold
+      if (length > 75) {
+        sendMail(
+          "URGENT - CONGESTION BEAT US AHHHHHHHHH",
+          "It took " +
+            length +
+            " blocks for " +
+            relayTxId +
+            " to get accepted." +
+            "\nRopsten haters :(",
+          "",
+          true
+        );
+      }
+
+      // console.log(relayTxId + " - " + length + " blocks");
+      return length;
+    }
+  }
+
+  return 0;
 }
 
 /**
@@ -228,19 +241,29 @@ export async function delay(ms: number) {
  * @param message Message to email
  */
 
-export async function sendMail(subject: string, message: string) {
-  const username = "";
-  const password = "";
-
+export async function sendMail(
+  subject: string,
+  message: string,
+  html: string,
+  error: boolean
+) {
+  const username = "postmaster";
+  const password = "0df668a31bbb75f51a25fea50f7eabe1-ed4dc7c4-61bdaf1d";
+  const prependSubject = new Date(TIMESTAMP).toUTCString() + ": " + subject;
   var transporter = nodemailer.createTransport(
-    `smtps://` + username + `%40gmail.com:` + password + `@smtp.gmail.com`
+    `smtps://` +
+      username +
+      `%40sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org:` +
+      password +
+      `@smtp.mailgun.org`
   );
 
-  var mailOptions = {
-    from: username + "@gmail.com",
+  let mailOptions = {
+    from: username + "@sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org",
     to: "stonecoldpat@gmail.com",
-    subject: subject,
-    text: message
+    subject: prependSubject,
+    text: message,
+    html: html
   };
 
   transporter.sendMail(mailOptions, function(error, info) {
@@ -250,6 +273,25 @@ export async function sendMail(subject: string, message: string) {
       console.log("Email sent: " + info.response);
     }
   });
+
+  // Only email chris if there was an error
+  if (error) {
+    mailOptions = {
+      from: username + "@sandboxe7855d55e0de4c6194e05e46a8d9b4fd.mailgun.org",
+      to: "cpbuckland88@gmail.com",
+      subject: prependSubject,
+      text: message,
+      html: html
+    };
+
+    transporter.sendMail(mailOptions, function(error, info) {
+      if (error) {
+        console.log(error);
+      } else {
+        console.log("Email sent: " + info.response);
+      }
+    });
+  }
 }
 /**
  * Compute a relay transaction ID
