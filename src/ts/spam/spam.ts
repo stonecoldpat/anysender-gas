@@ -2,18 +2,13 @@ import { ethers, Wallet } from "ethers";
 import { PerformanceTestFactory } from "../../out/PerformanceTestFactory";
 import { Provider } from "ethers/providers";
 import { parseEther, BigNumber } from "ethers/utils";
-import { sendMail, updateTimestamp } from "./anysender-utils";
-import { MNEMONIC } from "./config";
-import {
-  wait,
-  getRandomInt,
-  setup,
-  deployPerformanceContract,
-  waitForNextRound
-} from "./spam-utils";
+import { sendMail, updateTimestamp } from "../anysender-utils";
+import { MNEMONIC } from "../config";
+import { wait, getRandomInt, setup, waitForNextRound } from "./spam-utils";
+import { PerformanceTest } from "../../out/PerformanceTest";
 
 let KEY_PATH = "m/44'/50'/1'/1/"; // A key path
-const NO_KEYS = 70; // Number of keys to fund up front
+const NO_KEYS = 200; // Number of keys to fund up front
 const KEYS_PER_PROCESS = 40; // Number of signing keys per process
 
 /**
@@ -39,7 +34,8 @@ async function prepareSpamWallets(
     try {
       response = await wallet.sendTransaction({
         to: connectedWallet.address,
-        value: toDeposit
+        value: toDeposit,
+        gasPrice: parseEther("0.0000001"),
       });
     } catch (e) {
       console.log(e);
@@ -68,7 +64,7 @@ async function prepareSpamWallets(
  * @param provider InfuraProvider
  */
 async function spam(
-  performanceTestAddr: string,
+  performanceContract: PerformanceTest,
   startKey: number,
   noKeys: number,
   noJobs: number,
@@ -77,13 +73,6 @@ async function spam(
   wallet: Wallet,
   provider: Provider
 ) {
-  const performanceTestFactory = new PerformanceTestFactory(wallet);
-  let performTestContract = new ethers.Contract(
-    performanceTestAddr,
-    performanceTestFactory.interface.abi,
-    provider
-  );
-
   sendMail(
     "Process for spam started",
     "It considers range [" + startKey + "," + noKeys + "]",
@@ -100,9 +89,9 @@ async function spam(
     try {
       sendMail("New key started", "Key: " + startKey, "", false);
       for (let j = 0; j < noJobs; j++) {
-        await performTestContract.connect(connectedWallet).test({
+        await performanceContract.connect(connectedWallet).test({
           gasLimit: getRandomInt(50000, 500000),
-          gasPrice: gasPrice
+          gasPrice: gasPrice,
         });
         console.log("Transaction " + i + ":" + j + " sent");
         await wait(750);
@@ -123,7 +112,7 @@ async function spam(
  * @param provider Infura Provider
  */
 async function performSpam(
-  spamContract: string,
+  spamContract: PerformanceTest,
   gasPrice: BigNumber,
   noJobs: number,
   wallet: Wallet,
@@ -179,13 +168,13 @@ async function performSpam(
       case 0: // sun
         gasPrice = parseEther("0.0000001"); // 100 gwei
         keyDeposit = parseEther("1");
-        keyJobs = 20;
+        keyJobs = 40;
 
         break;
       case 1: // mon
-        gasPrice = parseEther("0.00000006"); // 60 gwei
+        gasPrice = parseEther("0.00000009"); // 60 gwei
         keyDeposit = parseEther("1");
-        keyJobs = 20;
+        keyJobs = 40;
 
         break;
       case 2: // tue
@@ -201,7 +190,7 @@ async function performSpam(
 
         break;
       case 4: // thur
-        gasPrice = parseEther("0.000000015"); // 15 gwei
+        gasPrice = parseEther("0.0000001"); // 100 gwei
         keyDeposit = parseEther("1");
         keyJobs = 50;
 
@@ -228,7 +217,7 @@ async function performSpam(
 
     // Spam ropsten with lots of transactions
     await prepareSpamWallets(keyDeposit, NO_KEYS, KEY_PATH, wallet, provider);
-    const spamContract = await deployPerformanceContract(wallet);
+    const spamContract = await new PerformanceTestFactory(wallet).deploy();
     console.log("Spam contract for ropsten: " + spamContract);
 
     const spamPromises = await performSpam(
@@ -244,7 +233,7 @@ async function performSpam(
     console.log("One small step for satoshi, one giant leap for mankind");
     await waitForNextRound();
   }
-})().catch(e => {
+})().catch((e) => {
   console.log(e);
   // Deal with the fact the chain failed
 });

@@ -1,6 +1,8 @@
 import { Wallet, ethers } from "ethers";
 import { PerformanceTestFactory } from "../../out/PerformanceTestFactory";
-import { INFURA_PROJECT_ID, MNEMONIC } from "./config";
+import { INFURA_PROJECT_ID, MNEMONIC } from "../config";
+import { parseEther } from "ethers/utils";
+import { PerformanceTest } from "../../out/PerformanceTest";
 
 /**
  * Set up the provider and wallet
@@ -15,22 +17,6 @@ export async function setup() {
   const connectedWallet = mnemonicWallet.connect(infuraProvider);
 
   return { wallet: connectedWallet, provider: infuraProvider };
-}
-
-/**
- * Deploy performance test contract to the network
- * @param wallet Signer
- * @param provider InfuraProvider
- */
-export async function deployPerformanceContract(
-  wallet: Wallet
-): Promise<string> {
-  const performanceTestFactory = new PerformanceTestFactory(wallet);
-  const performanceTestTransaction = performanceTestFactory.getDeployTransaction();
-  const response = await wallet.sendTransaction(performanceTestTransaction);
-  const receipt = await response.wait(6);
-
-  return receipt.contractAddress;
 }
 
 /**
@@ -99,7 +85,7 @@ export function prepareSummaryTable(tableData: any[]) {
  * @param ms Milli-seconds
  */
 export async function wait(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
