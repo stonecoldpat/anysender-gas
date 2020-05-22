@@ -1,8 +1,5 @@
-import { Wallet, ethers } from "ethers";
-import { PerformanceTestFactory } from "../../out/PerformanceTestFactory";
-import { INFURA_PROJECT_ID, MNEMONIC } from "../config";
-import { parseEther } from "ethers/utils";
-import { PerformanceTest } from "../../out/PerformanceTest";
+import { ethers } from "ethers";
+import { INFURA_PROJECT_ID, MNEMONIC, PRIV_KEY } from "../config";
 
 /**
  * Set up the provider and wallet
@@ -13,8 +10,10 @@ export async function setup() {
     INFURA_PROJECT_ID
   );
 
-  const mnemonicWallet = ethers.Wallet.fromMnemonic(MNEMONIC);
-  const connectedWallet = mnemonicWallet.connect(infuraProvider);
+  const wallet = MNEMONIC
+    ? ethers.Wallet.fromMnemonic(MNEMONIC)
+    : new ethers.Wallet(PRIV_KEY);
+  const connectedWallet = wallet.connect(infuraProvider);
 
   return { wallet: connectedWallet, provider: infuraProvider };
 }
