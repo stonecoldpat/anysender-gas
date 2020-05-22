@@ -176,8 +176,8 @@ setup().then((config) =>
     500,
     "0xc53af3030879ff5750ba56c17e656043c3a26987",
     15000,
-    // 5 min window size, print every 30 secs
-    new StatsPrinter(300, 20)
+    // 10 min window size, print every 3 min print intervalS
+    new StatsPrinter(600, 180)
   ).catch((err) => {
     console.log(err);
   })

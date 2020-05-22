@@ -1,3 +1,5 @@
+import { sendMail } from "../anysender-utils";
+
 type Stat = {
   txId: string;
   statTime: number;
@@ -101,18 +103,29 @@ export class StatsPrinter {
       errorCount: errorStats.length,
       errorMessages: errors,
 
-      longestBlocks: Math.max(blocks.reduce((a, b) => Math.max(a, b), 0) - 1, 0),
-      meanBlocks: Math.max(blocks.reduce((a, b) => a + b, 0) / this.stats.length - 1, 0),
-      smallestBlocks: blocks.reduce((a, b) => Math.min(a, b), Number.MAX_SAFE_INTEGER) - 1,
+      longestBlocks: Math.max(
+        blocks.reduce((a, b) => Math.max(a, b), 0) - 1,
+        0
+      ),
+      meanBlocks: Math.max(
+        blocks.reduce((a, b) => a + b, 0) / this.stats.length - 1,
+        0
+      ),
+      smallestBlocks:
+        blocks.reduce((a, b) => Math.min(a, b), Number.MAX_SAFE_INTEGER) - 1,
 
       longestMineTimeS: mineTimes.reduce((a, b) => Math.max(a, b), 0) / 1000,
       meanMineTimeS:
         mineTimes.reduce((a, b) => a + b, 0) / this.stats.length / 1000,
-      smallestMineTimeS: blocks.reduce((a, b) => Math.min(a, b), Number.MAX_SAFE_INTEGER) / 1000,
+      smallestMineTimeS:
+        blocks.reduce((a, b) => Math.min(a, b), Number.MAX_SAFE_INTEGER) / 1000,
 
       longestSendTimeMs: sendTimes.reduce((a, b) => Math.max(a, b), 0),
       meanSendTimeMs: sendTimes.reduce((a, b) => a + b, 0) / this.stats.length,
-      smallestSendTimeMs: sendTimes.reduce((a, b) => Math.min(a, b), Number.MAX_SAFE_INTEGER),
+      smallestSendTimeMs: sendTimes.reduce(
+        (a, b) => Math.min(a, b),
+        Number.MAX_SAFE_INTEGER
+      ),
 
       oldestTime: new Date(this.stats[0].statTime).toUTCString(),
       timeNow: new Date(
@@ -124,40 +137,52 @@ export class StatsPrinter {
     };
   }
 
-  public printStats(statsPrint: StatsPrint) {
-    console.log();
-    console.log();
-    console.log("=============================");
-    console.log("============STATS============");
-    console.log("=============================");
-    console.log();
-    console.log(`Time now: ${statsPrint.timeNow}`);
-    console.log(`Oldest time: ${statsPrint.oldestTime}`);
-    console.log(`Window size (s): ${statsPrint.windowSizeSeconds}`);
-    console.log(`Print interval (s): ${statsPrint.printIntervalSeconds}`);
-    console.log(`Success count: ${statsPrint.successCount}`);
-    console.log(`Error count: ${statsPrint.errorCount}`);
+  public async printStats(statsPrint: StatsPrint) {
+    const messages = [
+      "=============================",
+      "============STATS============",
+      "=============================",
+      "",
+      `Time now: ${statsPrint.timeNow}`,
+      `Oldest time: ${statsPrint.oldestTime}`,
+      `Window size (s): ${statsPrint.windowSizeSeconds}`,
+      `Print interval (s): ${statsPrint.printIntervalSeconds}`,
+      `Success count: ${statsPrint.successCount}`,
+      `Error count: ${statsPrint.errorCount}`,
+      ...[
+        ...(statsPrint.errorCount > 0
+          ? [
+              "",
+              "ERRORS",
+              ...statsPrint.errorMessages.map(
+                (e) => `Count: ${e.count}. Msg: ${e.msg}.`
+              ),
+            ]
+          : [""]),
+      ],
+
+      "",
+      `Mean blocks: ${statsPrint.meanBlocks}`,
+      `Longest blocks: ${statsPrint.longestBlocks}`,
+      `Shortest blocks: ${statsPrint.smallestBlocks}`,
+      "",
+      `Mean send time (ms): ${statsPrint.meanSendTimeMs}`,
+      `Longest send time (ms): ${statsPrint.longestSendTimeMs}`,
+      `Shortest send time (ms): ${statsPrint.smallestSendTimeMs}`,
+      "",
+      `Mean mine time (s): ${statsPrint.meanMineTimeS}`,
+      `Longest mine time (s): ${statsPrint.longestMineTimeS}`,
+      `Shortest mine time (s): ${statsPrint.smallestMineTimeS}`,
+      "",
+      "",
+    ];
+
+    const message = messages.reduce((a, b) => a + "\n" + b, "");
+
+    console.log(message);
+
     if (statsPrint.errorCount > 0) {
-        console.log();
-        console.log("ERRORS");
-      statsPrint.errorMessages.forEach((e) =>
-        console.log(`Count: ${e.count}. Msg: ${e.msg}.`)
-      );
+      await sendMail("Errors in CONSTANT_SEND", message, "", true);
     }
-    console.log();
-    console.log(`Mean blocks: ${statsPrint.meanBlocks}`);
-    console.log(`Longest blocks: ${statsPrint.longestBlocks}`);
-    console.log(`Shortest blocks: ${statsPrint.smallestBlocks}`);
-    console.log();
-    console.log(`Mean send time (ms): ${statsPrint.meanSendTimeMs}`);
-    console.log(`Longest send time (ms): ${statsPrint.longestSendTimeMs}`);
-    console.log(`Shortest send time (ms): ${statsPrint.smallestSendTimeMs}`);
-    console.log();
-    console.log(`Mean mine time (s): ${statsPrint.meanMineTimeS}`);
-    console.log(`Longest mine time (s): ${statsPrint.longestMineTimeS}`);
-    console.log(`Shortest mine time (s): ${statsPrint.smallestMineTimeS}`);
-    console.log();
-    console.log();
-    console.log();
   }
 }

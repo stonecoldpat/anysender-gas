@@ -18,7 +18,6 @@ export async function sendMail(
   html: string,
   error: boolean
 ) {
-  return;
   const prependSubject = new Date(TIMESTAMP).toUTCString() + ": " + subject;
   var transporter = nodemailer.createTransport(
     `smtps://postmaster` +

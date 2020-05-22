@@ -167,43 +167,43 @@ async function performSpam(
     switch (new Date().getDay()) {
       case 0: // sun
         gasPrice = parseEther("0.0000001"); // 100 gwei
-        keyDeposit = parseEther("1");
+        keyDeposit = parseEther("0.3");
         keyJobs = 40;
 
         break;
       case 1: // mon
         gasPrice = parseEther("0.00000009"); // 60 gwei
-        keyDeposit = parseEther("1");
+        keyDeposit = parseEther("0.3");
         keyJobs = 40;
 
         break;
       case 2: // tue
         gasPrice = parseEther("0.00000009"); // 90 gwei
-        keyDeposit = parseEther("1");
+        keyDeposit = parseEther("0.3");
         keyJobs = 4;
 
         break;
       case 3: // wed
         gasPrice = parseEther("0.00000008"); // 80 gwei
-        keyDeposit = parseEther("1");
+        keyDeposit = parseEther("0.3");
         keyJobs = 1;
 
         break;
       case 4: // thur
         gasPrice = parseEther("0.0000001"); // 100 gwei
-        keyDeposit = parseEther("1");
+        keyDeposit = parseEther("0.3");
         keyJobs = 50;
 
         break;
       case 5: // fri
         gasPrice = parseEther("0.00000015"); // 150 gwei
-        keyDeposit = parseEther("1");
+        keyDeposit = parseEther("0.3");
         keyJobs = 4;
 
         break;
       case 6: // sat
         gasPrice = parseEther("0.0000002"); // 200 gwei
-        keyDeposit = parseEther("2");
+        keyDeposit = parseEther("0.6");
         keyJobs = 40;
         break;
     }
