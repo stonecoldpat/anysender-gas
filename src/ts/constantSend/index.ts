@@ -1,11 +1,17 @@
 import { PerformanceTestFactory } from "../../out/PerformanceTestFactory";
 import { wait, setup } from "../spam/spam-utils";
-import { any, SignerWithAnySender } from "@any-sender/client";
+import { any, SignerWithAnySender, AnyDotSenderCoreClient } from "@any-sender/client";
 import { parseEther } from "ethers/utils";
 import { Signer, ethers, Wallet } from "ethers";
 import { WaitableRelayTransactionReceipt } from "@any-sender/client/lib/publicInterfaces";
 import { StatsPrinter } from "./statsPrinter";
 import { JsonRpcProvider } from "ethers/providers";
+
+// We refer to the client at the official address for checking balances
+const coreClient = new AnyDotSenderCoreClient({
+  apiUrl: "https://api.pisa.watch/any.sender.ropsten",
+  receiptSignerAddress: "0xe41743Ca34762b84004D3ABe932443FC51D561D5"
+});
 
 // send transactions with a wait in between each one
 const checkBalanceAndTopUp = async (
@@ -15,7 +21,7 @@ const checkBalanceAndTopUp = async (
   confirmations: number
 ) => {
   try {
-    const currentBalance = await signer.any.getBalance();
+    const currentBalance = await coreClient.balance(await signer.getAddress());
     if (currentBalance.lt(parseEther(minimumBalance.toString()))) {
       const depositResponse = await signer.any.deposit(
         parseEther(topupAmount.toString())
@@ -26,7 +32,7 @@ const checkBalanceAndTopUp = async (
   } catch (err) {
     console.error(err);
     try {
-      const currentBalance = await signer.any.getBalance();
+      const currentBalance = await coreClient.balance(await signer.getAddress());
       if (currentBalance < parseEther("0.1")) throw err;
     } catch (doh) {
       throw doh;
@@ -130,6 +136,8 @@ const sendAndRecordTransaction = async (
 };
 
 const run = async (
+  apiUrl: string,
+  receiptSignerAddress: string,
   signer: Wallet,
   sendingInterval: number,
   perfContractAddress: string,
@@ -138,18 +146,23 @@ const run = async (
 ) => {
   let runs = 0;
   (signer.provider as JsonRpcProvider).pollingInterval = 10000;
-  const signerWithSender = any.sender(signer);
+  const clientConfig = {
+    apiUrl,
+    receiptSignerAddress
+  };
+  const signerWithSender = any.sender(signer, clientConfig);
   const perfContract = any.senderAccount(
     new PerformanceTestFactory(signer).attach(perfContractAddress),
-    0
+    0,
+    clientConfig
   );
   // topup and wait confirmation
-  await checkBalanceAndTopUp(signerWithSender, 1, 10, 15);
+  await checkBalanceAndTopUp(signerWithSender, 1, 1, 15);
   let errors = false;
   while (!errors) {
     // do a quick check that
     if (runs % 100 === 0) {
-      await checkBalanceAndTopUp(signerWithSender, 1, 10, 0);
+      await checkBalanceAndTopUp(signerWithSender, 1, 1, 0);
     }
 
     // we dont await this since we want to send at a constant rate
@@ -170,14 +183,16 @@ const run = async (
   }
 };
 
-setup().then((config) =>
+setup().then(({ wallet, config }) =>
   run(
-    config.wallet,
+    config.ANYSENDER_API,
+    config.RECEIPT_SIGNER_ADDR,
+    wallet,
     500,
     "0xc53af3030879ff5750ba56c17e656043c3a26987",
     15000,
-    // 10 min window size, print every 3 min print intervalS
-    new StatsPrinter(600, 180)
+    // 1 min window size, print every 18 seconds print intervalS
+    new StatsPrinter(60, 18)
   ).catch((err) => {
     console.log(err);
   })

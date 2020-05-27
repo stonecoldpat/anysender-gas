@@ -46,7 +46,7 @@ async function sendTx(
   const userDot = any.account.sender(wallet);
 
   // Deposit into any.sender
-  const depositTx = await userDot.any.deposit(parseEther("100"), {
+  const depositTx = await userDot.any.deposit(parseEther("1"), {
     gasPrice: parseEther("0.00000002"), // 20
   });
 

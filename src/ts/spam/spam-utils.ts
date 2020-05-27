@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { INFURA_PROJECT_ID, MNEMONIC, PRIV_KEY } from "../config";
+import * as config from "../config";
 
 /**
  * Set up the provider and wallet
@@ -15,7 +16,7 @@ export async function setup() {
     : new ethers.Wallet(PRIV_KEY);
   const connectedWallet = wallet.connect(infuraProvider);
 
-  return { wallet: connectedWallet, provider: infuraProvider };
+  return { wallet: connectedWallet, provider: infuraProvider, config };
 }
 
 /**

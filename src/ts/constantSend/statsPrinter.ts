@@ -181,8 +181,8 @@ export class StatsPrinter {
 
     console.log(message);
 
-    if (statsPrint.errorCount > 0) {
-      await sendMail("Errors in CONSTANT_SEND", message, "", true);
-    }
+    // if (statsPrint.errorCount > 0) {
+    //   await sendMail("Errors in CONSTANT_SEND", message, "", true);
+    // }
   }
 }
