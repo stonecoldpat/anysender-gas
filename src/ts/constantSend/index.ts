@@ -142,6 +142,7 @@ const run = async (
   sendingInterval: number,
   perfContractAddress: string,
   blockPollingInterval: number,
+  maxPendingGas: number,
   statsPrinter: StatsPrinter
 ) => {
   let runs = 0;
@@ -159,22 +160,34 @@ const run = async (
   // topup and wait confirmation
   await checkBalanceAndTopUp(signerWithSender, 1, 1, 15);
   let errors = false;
+
+  // the gas limit we use for each transaction
+  const gasLimit = 200000;
+
+  let currentPendingGas = 0; // sum of gas limits of transactions in flight
   while (!errors) {
     // do a quick check that
     if (runs % 100 === 0) {
       await checkBalanceAndTopUp(signerWithSender, 1, 1, 0);
     }
 
-    // we dont await this since we want to send at a constant rate
-    sendAndRecordTransaction(
-      perfContract.tryme.bind(this),
-      signer.provider,
-      blockPollingInterval,
-      statsPrinter
-    ).catch((err) => {
-      console.error(err);
-      errors = true;
-    });
+    // We wait an interval if we don'ŧ have available pending gas
+    if (currentPendingGas + gasLimit <= maxPendingGas) {
+      currentPendingGas += gasLimit;
+      // we dont await this since we want to send at a constant rate
+      sendAndRecordTransaction(
+        () => perfContract.tryme({ gas: gasLimit }),
+        signer.provider,
+        blockPollingInterval,
+        statsPrinter
+      ).catch((err) => {
+        errors = true;
+      }).finally(() => {
+        currentPendingGas -= gasLimit;
+      });
+    } else {
+      console.log("Reached max pending gas. Waiting");
+    }
 
     // now wait until the result?
     await wait(sendingInterval);
@@ -188,11 +201,12 @@ setup().then(({ wallet, config }) =>
     config.ANYSENDER_API,
     config.RECEIPT_SIGNER_ADDR,
     wallet,
-    500,
+    200,
     "0xc53af3030879ff5750ba56c17e656043c3a26987",
     15000,
-    // 1 min window size, print every 18 seconds print intervalS
-    new StatsPrinter(60, 18)
+    config.MAX_PENDING_GAS,
+    // 10 min window size, print every 3 minutes print interval
+    new StatsPrinter(600, 180)
   ).catch((err) => {
     console.log(err);
   })
