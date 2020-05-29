@@ -185,8 +185,6 @@ const run = async (
       }).finally(() => {
         currentPendingGas -= gasLimit;
       });
-    } else {
-      console.log("Reached max pending gas. Waiting");
     }
 
     // now wait until the result?
