@@ -176,7 +176,7 @@ const run = async (
       currentPendingGas += gasLimit;
       // we dont await this since we want to send at a constant rate
       sendAndRecordTransaction(
-        () => perfContract.tryme({ gas: gasLimit }),
+        () => perfContract.tryme({ gasLimit }),
         signer.provider,
         blockPollingInterval,
         statsPrinter
