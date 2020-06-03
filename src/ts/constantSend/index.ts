@@ -6,6 +6,7 @@ import { Signer, ethers, Wallet } from "ethers";
 import { WaitableRelayTransactionReceipt } from "@any-sender/client/lib/publicInterfaces";
 import { StatsPrinter } from "./statsPrinter";
 import { JsonRpcProvider } from "ethers/providers";
+import { N_CLIENTS } from "../config";
 
 // We refer to the client at the official address for checking balances
 const coreClient = new AnyDotSenderCoreClient({
@@ -138,37 +139,49 @@ const sendAndRecordTransaction = async (
 const run = async (
   apiUrl: string,
   receiptSignerAddress: string,
-  signer: Wallet,
+  wallets: Wallet[],
   sendingInterval: number,
   perfContractAddress: string,
   blockPollingInterval: number,
   maxPendingGas: number,
   statsPrinter: StatsPrinter
 ) => {
-  let runs = 0;
-  (signer.provider as JsonRpcProvider).pollingInterval = 10000;
+  (wallets[0].provider as JsonRpcProvider).pollingInterval = 10000;
   const clientConfig = {
     apiUrl,
     receiptSignerAddress
   };
-  const signerWithSender = any.sender(signer, clientConfig);
-  const perfContract = any.senderAccount(
+
+  console.log("Signer addresses:", wallets.map(w => w.address).join(", "));
+
+  const signersWithSender = wallets.map(signer => any.sender(signer, clientConfig));
+  const perfContracts = wallets.map(signer => any.senderAccount(
     new PerformanceTestFactory(signer).attach(perfContractAddress),
     0,
     clientConfig
+  ));
+
+  await Promise.all(
+    signersWithSender.map(signerWithSender => checkBalanceAndTopUp(signerWithSender, 1, 1, 15))
   );
-  // topup and wait confirmation
-  await checkBalanceAndTopUp(signerWithSender, 1, 1, 15);
+
   let errors = false;
 
   // the gas limit we use for each transaction
   const gasLimit = 200000;
 
   let currentPendingGas = 0; // sum of gas limits of transactions in flight
+  let runs = 0;
   while (!errors) {
+    const i = runs % N_CLIENTS;
+    const perfContract = perfContracts[i];
+    const signer = wallets[i];
+
     // do a quick check that
     if (runs % 100 === 0) {
-      await checkBalanceAndTopUp(signerWithSender, 1, 1, 0);
+      await Promise.all(
+        signersWithSender.map(signerWithSender => checkBalanceAndTopUp(signerWithSender, 1, 1, 15))
+      );
     }
 
     // We wait an interval if we don'ŧ have available pending gas
@@ -194,11 +207,11 @@ const run = async (
   }
 };
 
-setup().then(({ wallet, config }) =>
+setup().then(({ wallets, config }) =>
   run(
     config.ANYSENDER_API,
     config.RECEIPT_SIGNER_ADDR,
-    wallet,
+    wallets,
     200,
     "0xc53af3030879ff5750ba56c17e656043c3a26987",
     15000,

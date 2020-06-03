@@ -3,11 +3,11 @@ export const ANYSENDER_RELAY_CONTRACT =
   "0xa404d1219Ed6Fe3cF2496534de2Af3ca17114b06";
 export const RECEIPT_SIGNER_ADDR = "0xe41743Ca34762b84004D3ABe932443FC51D561D5";
 export const DEPOSIT_CONFIRMATIONS = 10;
-export const MINIMUM_ANYSENDER_DEADLINE = 400
+export const MINIMUM_ANYSENDER_DEADLINE = 400;
 export const MAX_PENDING_GAS = 120000000;
-export const PRIV_KEY = "";
-export const MNEMONIC = "TODO";
-export const INFURA_PROJECT_ID = "TODO";
+export const MNEMONIC = "";
+export const N_CLIENTS = 3;
+export const INFURA_PROJECT_ID = "5298bec601f848c9990511f9577f623b";
 
 export const TO_BURST = 10;
 

@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { INFURA_PROJECT_ID, MNEMONIC, PRIV_KEY } from "../config";
+import { INFURA_PROJECT_ID, MNEMONIC, N_CLIENTS } from "../config";
 import * as config from "../config";
 
 /**
@@ -11,12 +11,14 @@ export async function setup() {
     INFURA_PROJECT_ID
   );
 
-  const wallet = MNEMONIC
-    ? ethers.Wallet.fromMnemonic(MNEMONIC)
-    : new ethers.Wallet(PRIV_KEY);
-  const connectedWallet = wallet.connect(infuraProvider);
+  const wallets = [];
+  for (let i = 0; i < N_CLIENTS; i++) {
+    const wallet = ethers.Wallet.fromMnemonic(MNEMONIC, "m/44'/60'/1'/0/" + i);
+    const connectedWallet = wallet.connect(infuraProvider);
+    wallets.push(connectedWallet);
+  }
 
-  return { wallet: connectedWallet, provider: infuraProvider, config };
+  return { wallets, provider: infuraProvider, config };
 }
 
 /**
