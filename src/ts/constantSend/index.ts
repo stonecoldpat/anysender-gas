@@ -155,12 +155,12 @@ const run = async (
   console.log("Signer addresses:", wallets.map(w => w.address).join(", "));
 
   const signersWithSender = wallets.map(signer => any.sender(signer, clientConfig));
-  const perfContracts = wallets.map(signer => any.senderAccount(
+  const perfContracts = wallets.map(signer => any.sender(
     new PerformanceTestFactory(signer).attach(perfContractAddress),
-    0,
     clientConfig
   ));
 
+  console.log("Checking balances and topping up");
   await Promise.all(
     signersWithSender.map(signerWithSender => checkBalanceAndTopUp(signerWithSender, 1, 1, 15))
   );
@@ -168,37 +168,51 @@ const run = async (
   let errors = false;
 
   // the gas limit we use for each transaction
-  const gasLimit = 200000;
+  const gasLimit = 30000;
 
   let currentPendingGas = 0; // sum of gas limits of transactions in flight
-  let runs = 0;
+  let runs = 1;
+  console.log("Starting");
   while (!errors) {
     const i = runs % N_CLIENTS;
     const perfContract = perfContracts[i];
     const signer = wallets[i];
 
     // do a quick check that
-    if (runs % 100 === 0) {
+    if (runs % 1000 === 0) {
       await Promise.all(
-        signersWithSender.map(signerWithSender => checkBalanceAndTopUp(signerWithSender, 1, 1, 15))
+        signersWithSender.map(signerWithSender => checkBalanceAndTopUp(signerWithSender, 1, 1, 0))
       );
     }
 
-    // We wait an interval if we don'ŧ have available pending gas
-    if (currentPendingGas + gasLimit <= maxPendingGas) {
-      currentPendingGas += gasLimit;
-      // we dont await this since we want to send at a constant rate
-      sendAndRecordTransaction(
-        () => perfContract.tryme({ gasLimit }),
-        signer.provider,
-        blockPollingInterval,
-        statsPrinter
-      ).catch((err) => {
-        errors = true;
-      }).finally(() => {
-        currentPendingGas -= gasLimit;
-      });
+    const actualGasLimit = gasLimit + (runs % 5000); // salt to avoid replay rejections
+
+    // We wait an interval if we don't have available pending gas
+    while (currentPendingGas + actualGasLimit > maxPendingGas) {
+      await wait(sendingInterval);
     }
+
+    // We wait an interval if we don'ŧ have available pending gas
+    currentPendingGas += actualGasLimit;
+    statsPrinter.pendingGas = currentPendingGas;
+
+    // we dont await this since we want to send at a constant 
+    sendAndRecordTransaction(
+      () => perfContract.tryme({
+        gasLimit: actualGasLimit
+      }),
+      signer.provider,
+      blockPollingInterval,
+      statsPrinter
+    ).catch((err) => {
+      console.log(err);
+      errors = true;
+    }).finally(() => {
+      currentPendingGas -= actualGasLimit;
+      statsPrinter.pendingGas = currentPendingGas;
+    });
+
+    statsPrinter.printStats();
 
     // now wait until the result?
     await wait(sendingInterval);
@@ -212,7 +226,7 @@ setup().then(({ wallets, config }) =>
     config.ANYSENDER_API,
     config.RECEIPT_SIGNER_ADDR,
     wallets,
-    200,
+    50,
     "0xc53af3030879ff5750ba56c17e656043c3a26987",
     15000,
     config.MAX_PENDING_GAS,

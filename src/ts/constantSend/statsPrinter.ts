@@ -1,5 +1,7 @@
 import { sendMail } from "../anysender-utils";
 
+import * as readline from "readline";
+
 type Stat = {
   txId: string;
   statTime: number;
@@ -48,6 +50,10 @@ export class StatsPrinter {
   public errors: string[] = [];
   private lastPrintTime = 0;
 
+  public pendingGas = 0;
+
+  private firstStatsPrinted = false;
+
   constructor(
     private readonly windowSizeSeconds: number,
     private readonly printIntervalSeconds: number
@@ -67,8 +73,6 @@ export class StatsPrinter {
     // print the stat once in a while
     if (statTime - this.lastPrintTime > this.printIntervalSeconds * 1000) {
       this.lastPrintTime = statTime;
-      const statsPrint = this.formatForPrint();
-      this.printStats(statsPrint);
     }
   }
 
@@ -137,7 +141,20 @@ export class StatsPrinter {
     };
   }
 
-  public async printStats(statsPrint: StatsPrint) {
+  private clearAndReset(lines: number) {
+    readline.cursorTo(process.stdout, 0);
+    while (lines > 0) {
+      lines--;
+      readline.clearLine(process.stdout, 0);
+      readline.moveCursor(process.stdout, 0, -1);
+    }
+  };
+
+  public async printStats() {
+    if (this.stats.length === 0) return;
+
+    const statsPrint = this.formatForPrint();
+
     const messages = [
       "=============================",
       "============STATS============",
@@ -162,6 +179,8 @@ export class StatsPrinter {
       ],
 
       "",
+      `Current pending gas: ${this.pendingGas}`,
+      "",
       `Mean blocks: ${statsPrint.meanBlocks}`,
       `Longest blocks: ${statsPrint.longestBlocks}`,
       `Shortest blocks: ${statsPrint.smallestBlocks}`,
@@ -177,12 +196,16 @@ export class StatsPrinter {
       "",
     ];
 
+
     const message = messages.reduce((a, b) => a + "\n" + b, "");
+
+    if (this.firstStatsPrinted) this.clearAndReset(message.length);
 
     console.log(message);
 
     // if (statsPrint.errorCount > 0) {
     //   await sendMail("Errors in CONSTANT_SEND", message, "", true);
     // }
+    this.firstStatsPrinted = true;
   }
 }
