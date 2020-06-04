@@ -133,6 +133,8 @@ const sendAndRecordTransaction = async (
         error: err,
       });
     }
+  } finally {
+    statsPrinter.printStats();
   }
 };
 
