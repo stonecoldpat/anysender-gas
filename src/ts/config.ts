@@ -7,7 +7,7 @@ export const MINIMUM_ANYSENDER_DEADLINE = 400;
 export const MAX_PENDING_GAS = 120000000;
 export const MNEMONIC = "";
 export const N_CLIENTS = 3;
-export const INFURA_PROJECT_ID = "5298bec601f848c9990511f9577f623b";
+export const INFURA_PROJECT_ID = "fd21f79874f74ed19e0b9f47f03446a3";
 
 export const TO_BURST = 10;
 

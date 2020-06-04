@@ -171,6 +171,8 @@ const run = async (
 
   // the gas limit we use for each transaction
   const gasLimit = 30000;
+  // the actual number varies because of theactualGasLimit; this is an upper bound, but pretty close
+  const reservedGasPerTx = 140000;
 
   let currentPendingGas = 0; // sum of gas limits of transactions in flight
   let runs = 1;
@@ -190,12 +192,12 @@ const run = async (
     const actualGasLimit = gasLimit + (runs % 5000); // salt to avoid replay rejections
 
     // We wait an interval if we don't have available pending gas
-    while (currentPendingGas + actualGasLimit > maxPendingGas) {
+    while (currentPendingGas + reservedGasPerTx > maxPendingGas) {
       await wait(sendingInterval);
     }
 
     // We wait an interval if we don'ŧ have available pending gas
-    currentPendingGas += actualGasLimit;
+    currentPendingGas += reservedGasPerTx;
     statsPrinter.pendingGas = currentPendingGas;
 
     // we dont await this since we want to send at a constant 
@@ -210,7 +212,7 @@ const run = async (
       console.log(err);
       errors = true;
     }).finally(() => {
-      currentPendingGas -= actualGasLimit;
+      currentPendingGas -= reservedGasPerTx;
       statsPrinter.pendingGas = currentPendingGas;
     });
 
