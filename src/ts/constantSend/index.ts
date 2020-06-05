@@ -155,7 +155,7 @@ const run = async (
 
   //* <--- switch to decide if topping up or not
   console.log("Checking balances and topping up");
-  signersWithSender.map(signerWithSender => topUp(signerWithSender, 10, 15))
+  await Promise.all(signersWithSender.map(signerWithSender => topUp(signerWithSender, 10, 15)));
   //*/
 
   let errors = false;
