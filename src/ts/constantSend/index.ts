@@ -9,35 +9,26 @@ import { JsonRpcProvider } from "ethers/providers";
 import { N_CLIENTS } from "../config";
 
 // We refer to the client at the official address for checking balances
-const coreClient = new AnyDotSenderCoreClient({
-  apiUrl: "https://api.pisa.watch/any.sender.ropsten",
-  receiptSignerAddress: "0xe41743Ca34762b84004D3ABe932443FC51D561D5"
-});
+// const coreClient = new AnyDotSenderCoreClient({
+//   apiUrl: "https://api.pisa.watch/any.sender.ropsten",
+//   receiptSignerAddress: "0xe41743Ca34762b84004D3ABe932443FC51D561D5"
+// });
 
 // send transactions with a wait in between each one
-const checkBalanceAndTopUp = async (
+const topUp = async (
   signer: SignerWithAnySender<Signer>,
-  minimumBalance: number,
   topupAmount: number,
   confirmations: number
 ) => {
   try {
-    const currentBalance = await coreClient.balance(await signer.getAddress());
-    if (currentBalance.lt(parseEther(minimumBalance.toString()))) {
-      const depositResponse = await signer.any.deposit(
-        parseEther(topupAmount.toString())
-      );
+    const depositResponse = await signer.any.deposit(
+      parseEther(topupAmount.toString())
+    );
 
-      if (confirmations !== 0) await depositResponse.wait(confirmations);
-    }
+    if (confirmations !== 0) await depositResponse.wait(confirmations);
   } catch (err) {
     console.error(err);
-    try {
-      const currentBalance = await coreClient.balance(await signer.getAddress());
-      if (currentBalance < parseEther("0.1")) throw err;
-    } catch (doh) {
-      throw doh;
-    }
+    throw err;
   }
 };
 
@@ -162,10 +153,10 @@ const run = async (
     clientConfig
   ));
 
+  //* <--- switch to decide if topping up or not
   console.log("Checking balances and topping up");
-  await Promise.all(
-    signersWithSender.map(signerWithSender => checkBalanceAndTopUp(signerWithSender, 1, 1, 15))
-  );
+  signersWithSender.map(signerWithSender => topUp(signerWithSender, 10, 15))
+  //*/
 
   let errors = false;
 
@@ -181,13 +172,6 @@ const run = async (
     const i = runs % N_CLIENTS;
     const perfContract = perfContracts[i];
     const signer = wallets[i];
-
-    // do a quick check that
-    if (runs % 1000 === 0) {
-      await Promise.all(
-        signersWithSender.map(signerWithSender => checkBalanceAndTopUp(signerWithSender, 1, 1, 0))
-      );
-    }
 
     const actualGasLimit = gasLimit + (runs % 5000); // salt to avoid replay rejections
 
