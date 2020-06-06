@@ -26,7 +26,7 @@ async function sendTx(
     return await userDot.any.sendTransaction({
       to: performanceContract.address,
       data: callData,
-      gas: gasLimit,
+      gasLimit: gasLimit,
     });
   } catch (e) {
     console.log("To double-check an exception was thrown during sendTx");
@@ -40,29 +40,29 @@ async function sendTx(
  * - Send relay jobs to any.sender
  */
 (async () => {
-  const { wallet } = await setup();
+  const { wallets } = await setup();
 
-  console.log("Wallet: " + wallet.address);
-  const userDot = any.account.sender(wallet);
+  console.log("Wallet: " + wallets[0].address);
+  const userDot = any.sender(wallets[0]);
 
   // Deposit into any.sender
-  const depositTx = await userDot.any.deposit(parseEther("1"), {
-    gasPrice: parseEther("0.00000002"), // 20
+  const depositTx = await userDot.any.deposit(parseEther("100"), {
+    gasPrice: parseEther("0.0000002"), // 20
   });
 
   console.log("https://ropsten.etherscan.io/tx/" + depositTx.hash);
   await depositTx.wait(12);
 
-  const performanceContract = new PerformanceTestFactory(wallet).attach(
+  const performanceContract = new PerformanceTestFactory(wallets[0]).attach(
     "0xc53af3030879ff5750ba56c17e656043c3a26987"
   );
 
-  const isProxyDeployed = await userDot.any.isProxyAccountDeployed();
-  console.log("Does proxy exist: " + isProxyDeployed);
+  // const isProxyDeployed = await userDot.any.isProxyAccountDeployed();
+  // console.log("Does proxy exist: " + isProxyDeployed);
 
   let anysenderRounds = 1000; // Number of rounds sending up to any.sender
-  let relayJobs = 15; // Number of relay jobs
-  let gasLimit: 300000; // Gas per transaction
+  let relayJobs = 150; // Number of relay jobs
+  let gasLimit = 211000; // Gas per transaction
   const callData = performanceContract.interface.functions.tryme.encode([]);
 
   // Repeat the batches multiple times
@@ -73,7 +73,7 @@ async function sendTx(
     for (let j = 0; j < relayJobs; j++) {
       // Send receipt!
       listOfRelayPromises.push(
-        sendTx(userDot, performanceContract, callData, gasLimit)
+        sendTx(userDot, performanceContract, callData, gasLimit + j)
       );
       await wait(2000);
     }
@@ -98,10 +98,12 @@ async function sendTx(
         console.log(
           "https://ropsten.etherscan.io/tx/" + receipt.transactionHash
         );
+
+        console.log("Sent by: " + receipt.from);
       }
     }
     console.log("Round " + i + " completed.");
-    await wait(30000);
+    await wait(14000);
   }
 })().catch((e) => {
   console.log(e);

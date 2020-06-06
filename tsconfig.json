@@ -7,6 +7,6 @@
     "rootDir": "src",
     "outDir": "./lib"
   },
-  "files": ["src/contracts/PerformanceTest.d.ts"],
+  "files": ["src/out/PerformanceTest.d.ts"],
   "include": ["src"]
 }
