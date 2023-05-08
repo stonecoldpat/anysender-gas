@@ -44,7 +44,7 @@
   "devDependencies": {
     "@types/node": "^13.9.4",
     "@types/request-promise-native": "^1.0.17",
-    "ethereum-waffle": "2.3.0-istanbul.0",
+    "ethereum-waffle": "2.5.1",
     "ethers": "4.0.47",
     "typechain": "1.0.3",
     "typechain-target-ethers": "^1.0.3"
